@@ -7,7 +7,7 @@
 
 import { GoogleGenerativeAI } from '@google/generative-ai'
 
-const MODEL = process.env.GEMINI_MODEL || 'gemini-2.0-flash'
+const MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash'
 const MAX_BASE64 = 6 * 1024 * 1024 // ~6MB of base64 payload guard
 
 const EXTRACTION_PROMPT = `You are a medical-billing OCR extractor. Read the attached medical bill
