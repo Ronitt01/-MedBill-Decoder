@@ -43,10 +43,15 @@ export default {
           '0%': { backgroundPosition: '-200% 0' },
           '100%': { backgroundPosition: '200% 0' },
         },
+        'grid-tide': {
+          '0%, 100%': { transform: 'translate3d(0, 0, 0) scale(1.04)' },
+          '50%': { transform: 'translate3d(0, -8px, 0) scale(1.06)' },
+        },
       },
       animation: {
         'fade-up': 'fade-up 0.7s cubic-bezier(0.22, 1, 0.36, 1) both',
         shimmer: 'shimmer 2.5s linear infinite',
+        'grid-tide': 'grid-tide 18s ease-in-out infinite',
       },
     },
   },

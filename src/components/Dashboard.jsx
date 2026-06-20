@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import AnimatedNumber from './AnimatedNumber.jsx'
+import Odometer from './Odometer.jsx'
+import AmbientGrid from './AmbientGrid.jsx'
 import AuditTable from './AuditTable.jsx'
 import AppealLetter from './AppealLetter.jsx'
 import BeforeAfterCard from './BeforeAfterCard.jsx'
@@ -27,7 +28,7 @@ export default function Dashboard({ report, meta, onReset }) {
 
   return (
     <div className="relative min-h-screen pb-20">
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-80 grid-bg mask-fade-b opacity-40" />
+      <AmbientGrid variant="dashboard" glow />
 
       {/* Header */}
       <header className="sticky top-0 z-40 border-b border-white/5 bg-ink-950/70 backdrop-blur-xl">
@@ -69,7 +70,13 @@ export default function Dashboard({ report, meta, onReset }) {
                 Potential billing errors found
               </p>
               <p className="mt-1 font-mono text-5xl font-extrabold text-flag-red sm:text-7xl">
-                <AnimatedNumber value={report.totalDisputable} prefix="$" decimals={0} />
+                <Odometer
+                  value={report.totalDisputable}
+                  prefix="$"
+                  decimals={0}
+                  duration={820}
+                  glow="rgba(255,92,114,0.45)"
+                />
               </p>
               <p className="mt-3 max-w-md text-sm text-slate-400">
                 Across {report.lineItems.length} line items, compared against the{' '}

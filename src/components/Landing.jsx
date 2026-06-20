@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import Uploader from './Uploader.jsx'
 import DemoSection from './DemoSection.jsx'
 import ErrorBoundary from './ErrorBoundary.jsx'
+import AmbientGrid from './AmbientGrid.jsx'
 
 const Hero3D = lazy(() => import('./Hero3D.jsx'))
 
@@ -53,8 +54,8 @@ function Hero({ onAnalyze, onSample, status, error }) {
   return (
     <section className="relative overflow-hidden pt-36 pb-20">
       {/* Ambient background */}
-      <div className="pointer-events-none absolute inset-0 grid-bg mask-fade-b opacity-60" />
-      <div className="pointer-events-none absolute -top-40 left-1/2 h-[480px] w-[820px] -translate-x-1/2 rounded-full bg-accent/10 blur-[140px]" />
+      <AmbientGrid variant="hero" glow />
+      <div className="pointer-events-none absolute -top-40 left-1/2 h-[480px] w-[820px] -translate-x-1/2 rounded-full bg-accent/[0.06] blur-[140px]" />
 
       <div className="section relative grid items-center gap-10 lg:grid-cols-2">
         <motion.div
