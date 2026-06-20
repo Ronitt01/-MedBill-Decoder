@@ -1,6 +1,7 @@
 import { lazy, Suspense, useCallback, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import Landing from './components/Landing.jsx'
+import CursorAurora from './components/CursorAurora.jsx'
 import { auditBill } from './lib/audit.js'
 import { extractBill } from './lib/api.js'
 import { SAMPLE_BILL } from './lib/sampleBill.js'
@@ -63,7 +64,9 @@ export default function App() {
   }, [])
 
   return (
-    <AnimatePresence mode="wait">
+    <>
+      <CursorAurora />
+      <AnimatePresence mode="wait">
       {view === 'landing' ? (
         <motion.div
           key="landing"
@@ -92,6 +95,7 @@ export default function App() {
           </Suspense>
         </motion.div>
       )}
-    </AnimatePresence>
+      </AnimatePresence>
+    </>
   )
 }

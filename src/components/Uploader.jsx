@@ -44,6 +44,8 @@ export default function Uploader({ onAnalyze, status, error, compact = false }) 
         onClick={() => !loading && inputRef.current?.click()}
         role="button"
         tabIndex={0}
+        data-cursor="dropzone"
+        data-dragging={dragging}
         onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && !loading && inputRef.current?.click()}
         className={[
           'group relative flex cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed text-center transition-all duration-300',

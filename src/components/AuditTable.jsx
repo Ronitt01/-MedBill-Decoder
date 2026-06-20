@@ -18,6 +18,14 @@ function Row({ row }) {
     <>
       <button
         onClick={() => setOpen((v) => !v)}
+        data-glow={row.flag}
+        data-readout={[
+          row.code || '—',
+          row.multiplier != null ? `${row.multiplier}× Medicare` : null,
+          FLAG_LABEL[row.flag]?.toUpperCase(),
+        ]
+          .filter(Boolean)
+          .join('  ·  ')}
         className="grid w-full grid-cols-[16px_1fr_auto] items-center gap-3 px-4 py-3.5 text-left transition hover:bg-white/[0.025] sm:grid-cols-[16px_64px_1fr_90px_90px_70px_28px] sm:gap-4 sm:px-6"
       >
         <span className={`h-2.5 w-2.5 rounded-full ${FLAG_DOT[row.flag]}`} title={FLAG_LABEL[row.flag]} />
