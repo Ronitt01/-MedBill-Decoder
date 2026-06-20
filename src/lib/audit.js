@@ -232,9 +232,23 @@ export function auditBill(rawItems) {
   )
   const totalDisputable = money(lines.reduce((s, l) => s + (l.disputable || 0), 0))
 
-  // Bill health: share of the bill that is NOT flagged as excess. 100 = clean.
+  // How much of the bill could we actually benchmark? A summary bill with no
+  // CPT/HCPCS codes has nothing to verify, so we must NOT present it as "clean".
+  const verifiedCount = lines.filter((l) => l.medicare != null).length
+  const unverifiedCount = lines.length - verifiedCount
+  const verifiedCharged = money(
+    lines.reduce((s, l) => s + (l.medicare != null ? l.chargedAmount : 0), 0)
+  )
+  const coverage = totalCharged > 0 ? verifiedCharged / totalCharged : 0
+  // status: 'unverified' (no codes at all), 'partial' (most value unbenchmarked),
+  // or 'audited' (enough of the bill was benchmarked to trust the result).
+  const status = verifiedCount === 0 ? 'unverified' : coverage < 0.5 ? 'partial' : 'audited'
+
+  // Bill health only means something when we actually verified the bill.
   const healthScore =
-    totalCharged > 0
+    status === 'unverified'
+      ? null
+      : totalCharged > 0
       ? Math.max(0, Math.min(100, Math.round((1 - totalDisputable / totalCharged) * 100)))
       : 100
 
@@ -255,6 +269,10 @@ export function auditBill(rawItems) {
     totalDisputable,
     healthScore,
     counts,
+    verifiedCount,
+    unverifiedCount,
+    coverage,
+    status,
     source: CMS_SOURCE,
   }
 }

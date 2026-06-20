@@ -26,6 +26,8 @@ export default function Dashboard({ report, meta, onReset }) {
 
   if (!report) return null
 
+  const unverified = report.status === 'unverified'
+
   return (
     <div className="relative min-h-screen pb-20">
       <AmbientGrid variant="dashboard" glow />
@@ -66,63 +68,119 @@ export default function Dashboard({ report, meta, onReset }) {
               <p className="text-sm text-slate-400">
                 {meta?.providerName} · Account {meta?.accountNumber}
               </p>
-              <p className="mt-3 text-sm uppercase tracking-widest text-slate-500">
-                Potential billing errors found
-              </p>
-              <p className="mt-1 font-mono text-5xl font-extrabold text-flag-red sm:text-7xl">
-                <Odometer
-                  value={report.totalDisputable}
-                  prefix="$"
-                  decimals={0}
-                  duration={820}
-                  glow="rgba(255,92,114,0.45)"
-                />
-              </p>
-              <p className="mt-3 max-w-md text-sm text-slate-400">
-                Across {report.lineItems.length} line items, compared against the{' '}
-                <span className="text-slate-300">{report.source}</span>.
-              </p>
 
-              {/* Bill health score */}
-              <div className="mt-6 max-w-sm">
-                <div className="mb-1.5 flex items-center justify-between text-xs">
-                  <span className="font-medium text-slate-300">Bill health score</span>
-                  <span
-                    className={`font-mono font-semibold ${
-                      report.healthScore >= 70
-                        ? 'text-flag-green'
-                        : report.healthScore >= 40
-                        ? 'text-flag-yellow'
-                        : 'text-flag-red'
-                    }`}
-                  >
-                    {report.healthScore}/100
-                  </span>
-                </div>
-                <div className="h-2 w-full overflow-hidden rounded-full bg-white/10">
-                  <motion.div
-                    initial={{ width: 0 }}
-                    animate={{ width: `${report.healthScore}%` }}
-                    transition={{ duration: 1.1, ease: [0.22, 1, 0.36, 1], delay: 0.3 }}
-                    className={`h-full rounded-full ${
-                      report.healthScore >= 70
-                        ? 'bg-flag-green'
-                        : report.healthScore >= 40
-                        ? 'bg-flag-yellow'
-                        : 'bg-flag-red'
-                    }`}
-                  />
-                </div>
-                <p className="mt-1.5 text-xs text-slate-500">
-                  Share of the bill priced within a fair-market range.
-                </p>
-              </div>
+              {unverified ? (
+                <>
+                  <p className="mt-3 text-sm uppercase tracking-widest text-flag-yellow">
+                    Bill could not be verified
+                  </p>
+                  <p className="mt-1 font-mono text-4xl font-extrabold text-white sm:text-6xl">
+                    No billing codes
+                  </p>
+                  <p className="mt-3 max-w-md text-sm text-slate-400">
+                    This statement lists only summary categories — no CPT/HCPCS codes — so its
+                    charges can’t be benchmarked against the{' '}
+                    <span className="text-slate-300">{report.source}</span>. Summary bills like this
+                    should be fully itemized before you pay.
+                  </p>
+
+                  <div className="mt-6 max-w-sm">
+                    <div className="mb-1.5 flex items-center justify-between text-xs">
+                      <span className="font-medium text-slate-300">Verification coverage</span>
+                      <span className="font-mono font-semibold text-flag-yellow">
+                        {Math.round(report.coverage * 100)}%
+                      </span>
+                    </div>
+                    <div className="h-2 w-full overflow-hidden rounded-full bg-white/10">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${Math.max(2, Math.round(report.coverage * 100))}%` }}
+                        transition={{ duration: 1, ease: [0.22, 1, 0.36, 1], delay: 0.3 }}
+                        className="h-full rounded-full bg-flag-yellow"
+                      />
+                    </div>
+                    <p className="mt-1.5 text-xs text-slate-500">
+                      {report.unverifiedCount} of {report.lineItems.length} line items had no billing code.
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className="mt-3 text-sm uppercase tracking-widest text-slate-500">
+                    Potential billing errors found
+                  </p>
+                  <p className="mt-1 font-mono text-5xl font-extrabold text-flag-red sm:text-7xl">
+                    <Odometer
+                      value={report.totalDisputable}
+                      prefix="$"
+                      decimals={0}
+                      duration={820}
+                      glow="rgba(255,92,114,0.45)"
+                    />
+                  </p>
+                  <p className="mt-3 max-w-md text-sm text-slate-400">
+                    Across {report.lineItems.length} line items, compared against the{' '}
+                    <span className="text-slate-300">{report.source}</span>.
+                    {report.unverifiedCount > 0 && (
+                      <span className="text-slate-500">
+                        {' '}({report.unverifiedCount} had no code and weren’t verified.)
+                      </span>
+                    )}
+                  </p>
+
+                  {report.healthScore != null && (
+                    <div className="mt-6 max-w-sm">
+                      <div className="mb-1.5 flex items-center justify-between text-xs">
+                        <span className="font-medium text-slate-300">Bill health score</span>
+                        <span
+                          className={`font-mono font-semibold ${
+                            report.healthScore >= 70
+                              ? 'text-flag-green'
+                              : report.healthScore >= 40
+                              ? 'text-flag-yellow'
+                              : 'text-flag-red'
+                          }`}
+                        >
+                          {report.healthScore}/100
+                        </span>
+                      </div>
+                      <div className="h-2 w-full overflow-hidden rounded-full bg-white/10">
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: `${report.healthScore}%` }}
+                          transition={{ duration: 1.1, ease: [0.22, 1, 0.36, 1], delay: 0.3 }}
+                          className={`h-full rounded-full ${
+                            report.healthScore >= 70
+                              ? 'bg-flag-green'
+                              : report.healthScore >= 40
+                              ? 'bg-flag-yellow'
+                              : 'bg-flag-red'
+                          }`}
+                        />
+                      </div>
+                      <p className="mt-1.5 text-xs text-slate-500">
+                        Share of the bill priced within a fair-market range.
+                      </p>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-2">
               <Stat label="Total billed" value={`$${report.totalCharged.toLocaleString()}`} />
-              <Stat label="Fair-market est." value={`$${report.totalFair.toLocaleString()}`} tone="green" />
-              <Stat label="Red flags" value={report.counts.red} tone="red" />
-              <Stat label="Review" value={report.counts.yellow} tone="yellow" />
+              {unverified ? (
+                <>
+                  <Stat label="Line items" value={report.lineItems.length} />
+                  <Stat label="Without code" value={report.unverifiedCount} tone="yellow" />
+                  <Stat label="Verified" value={`${Math.round(report.coverage * 100)}%`} />
+                </>
+              ) : (
+                <>
+                  <Stat label="Fair-market est." value={`$${report.totalFair.toLocaleString()}`} tone="green" />
+                  <Stat label="Red flags" value={report.counts.red} tone="red" />
+                  <Stat label="Review" value={report.counts.yellow} tone="yellow" />
+                </>
+              )}
             </div>
           </div>
         </motion.div>
@@ -158,18 +216,32 @@ export default function Dashboard({ report, meta, onReset }) {
             <div className="card p-6">
               <h3 className="text-base font-semibold text-white">Take action</h3>
               <p className="mt-1 text-sm text-slate-400">
-                Generate a formal appeal letter citing every flagged charge and the total disputed.
+                {unverified
+                  ? 'No codes to verify on this bill. Generate a letter demanding a fully itemized bill with CPT/HCPCS codes — then re-run the audit.'
+                  : 'Generate a formal appeal letter citing every flagged charge and the total disputed.'}
               </p>
               <button onClick={() => setShowLetter(true)} className="btn-primary mt-4 w-full">
                 <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4">
                   <path d="M5 4h9l5 5v11H5z" stroke="currentColor" strokeWidth="1.6" />
                   <path d="M8 13h7M8 16h5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
                 </svg>
-                Generate appeal letter
+                {unverified ? 'Request itemized bill' : 'Generate appeal letter'}
               </button>
             </div>
 
-            <BeforeAfterCard report={report} />
+            {unverified ? (
+              <div className="card p-6">
+                <h3 className="text-base font-semibold text-white">Why itemize?</h3>
+                <p className="mt-2 text-sm leading-relaxed text-slate-400">
+                  You have the right to a fully itemized bill on request. Summary categories like
+                  “Pharmacy” or “Room rent” hide duplicate, unbundled, and inflated charges — getting
+                  the line-item detail (with codes) is the first step to disputing them. Once you have
+                  it, upload it here and we’ll benchmark every line.
+                </p>
+              </div>
+            ) : (
+              <BeforeAfterCard report={report} />
+            )}
 
             <div className="glass rounded-2xl p-5">
               <p className="text-xs leading-relaxed text-slate-400">

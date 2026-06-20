@@ -22,6 +22,58 @@ export function buildAppealLetter(report, meta = {}) {
 
   const flagged = report.lineItems.filter((l) => l.flag === 'red' || (l.disputable || 0) > 0)
 
+  // No verifiable, disputable items (e.g. a summary bill with no codes) — the right
+  // move is to demand a fully itemized bill, which is what an advocate would do first.
+  if (flagged.length === 0) {
+    const summary = report.lineItems
+      .map(
+        (l, i) =>
+          `${i + 1}. ${l.description || 'Charge'} — ${fmt(l.chargedAmount)}${
+            l.code ? ` (code ${l.code})` : ' (no code listed)'
+          }`
+      )
+      .join('\n')
+
+    return `${dateLabel}
+
+${providerName}
+Attn: Billing / Patient Accounts Department
+
+Re: Request for a fully itemized bill
+Account / Statement Number: ${accountNumber}
+Patient: ${patientName}
+
+To Whom It May Concern:
+
+I am requesting a fully itemized statement for the above account. The statement I
+received lists only summary categories and totals, without the individual billing
+codes (CPT/HCPCS), unit prices, quantities, and dates of service required to verify
+the charges. As billed, these charges cannot be independently reviewed:
+
+${summary}
+
+Total billed: ${fmt(report.totalCharged)}
+
+I respectfully request that you:
+
+  1. Provide a fully itemized bill listing every service and supply, each with its
+     CPT/HCPCS (or equivalent) code, unit price, quantity, and date of service.
+  2. Identify any bundled or package charges and the components included in them.
+  3. Place any collection activity on hold until the itemized bill is provided and I
+     have had a reasonable opportunity to review it.
+
+I intend to review the itemized charges for duplicate, unbundled, or excessive items
+once the detail is provided. I look forward to your written response within 30 days.
+
+Sincerely,
+
+${patientName}
+[Phone]  •  [Email]  •  [Mailing Address]
+
+---
+This letter was prepared with MedBill Decoder. Informational only; not legal advice.`
+  }
+
   const lines = flagged.map((l, i) => {
     const parts = [`${i + 1}. CPT/HCPCS ${l.code || 'N/A'} — ${l.description || 'service'}`]
     parts.push(`   Charged: ${fmt(l.chargedAmount)}`)
