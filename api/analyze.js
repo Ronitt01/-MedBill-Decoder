@@ -112,6 +112,9 @@ export default async function handler(req, res) {
     })
   } catch (err) {
     console.error('analyze error', err)
-    res.status(500).json({ error: 'Extraction failed. Please try again in a moment.' })
+    res.status(500).json({
+      error: 'Extraction failed. Please try again in a moment.',
+      detail: String(err?.message || err).slice(0, 400),
+    })
   }
 }
