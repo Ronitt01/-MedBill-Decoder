@@ -112,9 +112,14 @@ export default async function handler(req, res) {
     })
   } catch (err) {
     console.error('analyze error', err)
-    res.status(500).json({
-      error: 'Extraction failed. Please try again in a moment.',
-      detail: String(err?.message || err).slice(0, 400),
-    })
+    const msg = String(err?.message || '')
+    // Surface the common, actionable failures with a friendly message.
+    let friendly = 'Extraction failed. Please try again in a moment.'
+    if (/quota|rate limit|429/i.test(msg)) {
+      friendly = 'The free AI quota is busy right now. Please wait a minute and try again.'
+    } else if (/API key not valid|API_KEY_INVALID/i.test(msg)) {
+      friendly = 'The server API key is invalid. Please check the GEMINI_API_KEY configuration.'
+    }
+    res.status(500).json({ error: friendly })
   }
 }
