@@ -70,3 +70,21 @@ export async function extractBill(file) {
 
   return resp.json()
 }
+
+// Layer 3 — fetch labeled AI market estimates for uncoded lines. Best-effort: any
+// failure resolves to an empty list so the deterministic audit is never blocked.
+export async function estimateMarketRates(items, countryName, currencyCode) {
+  if (!Array.isArray(items) || items.length === 0) return []
+  try {
+    const resp = await fetch('/api/estimate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ items, countryName, currencyCode }),
+    })
+    if (!resp.ok) return []
+    const data = await resp.json()
+    return Array.isArray(data.estimates) ? data.estimates : []
+  } catch {
+    return []
+  }
+}

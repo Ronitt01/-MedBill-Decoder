@@ -71,7 +71,7 @@ export default function Uploader({ onAnalyze, status, error, compact = false }) 
               <div className="absolute inset-0 animate-spin rounded-full border-2 border-transparent border-t-accent" />
             </div>
             <p className="text-sm font-medium text-slate-200">Reading your bill…</p>
-            <p className="text-xs text-slate-400">Extracting codes &amp; checking Medicare benchmarks</p>
+            <p className="text-xs text-slate-400">Extracting codes &amp; running the tiered audit</p>
           </div>
         ) : (
           <>

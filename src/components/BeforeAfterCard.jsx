@@ -1,6 +1,8 @@
 import { useRef, useState } from 'react'
+import { formatMoney } from '../lib/format.js'
 
 export default function BeforeAfterCard({ report }) {
+  const m = (n) => formatMoney(n, report.currency, { decimals: 0 })
   const cardRef = useRef(null)
   const [busy, setBusy] = useState(false)
 
@@ -49,7 +51,7 @@ export default function BeforeAfterCard({ report }) {
 
           <p className="mt-5 text-xs uppercase tracking-widest text-slate-500">Potentially disputable</p>
           <p className="font-mono text-4xl font-extrabold text-flag-red">
-            ${report.totalDisputable.toLocaleString()}
+            {m(report.totalDisputable)}
           </p>
           <p className="mt-1 text-sm text-slate-400">
             {pct}% of this bill may be overcharged or billed in error.
@@ -58,20 +60,16 @@ export default function BeforeAfterCard({ report }) {
           <div className="mt-5 grid grid-cols-2 gap-3">
             <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3">
               <p className="text-[11px] uppercase tracking-wider text-slate-500">Original bill</p>
-              <p className="font-mono text-lg font-bold text-white">
-                ${report.totalCharged.toLocaleString()}
-              </p>
+              <p className="font-mono text-lg font-bold text-white">{m(report.totalCharged)}</p>
             </div>
             <div className="rounded-xl border border-flag-green/20 bg-flag-green/5 p-3">
               <p className="text-[11px] uppercase tracking-wider text-slate-500">Fair-market est.</p>
-              <p className="font-mono text-lg font-bold text-flag-green">
-                ${report.totalFair.toLocaleString()}
-              </p>
+              <p className="font-mono text-lg font-bold text-flag-green">{m(report.totalFair)}</p>
             </div>
           </div>
 
           <p className="mt-4 text-[10px] text-slate-600">
-            Benchmarks: CMS Medicare fee schedule · Informational only
+            Benchmarks: {report.scheduleName} · Informational only
           </p>
         </div>
       </div>

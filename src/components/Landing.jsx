@@ -4,6 +4,7 @@ import Uploader from './Uploader.jsx'
 import DemoSection from './DemoSection.jsx'
 import ErrorBoundary from './ErrorBoundary.jsx'
 import AmbientGrid from './AmbientGrid.jsx'
+import CountrySelect from './CountrySelect.jsx'
 
 const Hero3D = lazy(() => import('./Hero3D.jsx'))
 
@@ -50,7 +51,7 @@ function Navbar({ onSample }) {
   )
 }
 
-function Hero({ onAnalyze, onSample, status, error }) {
+function Hero({ onAnalyze, onSample, status, error, country, onCountryChange }) {
   return (
     <section className="relative overflow-hidden pt-36 pb-20">
       {/* Ambient background */}
@@ -65,18 +66,23 @@ function Hero({ onAnalyze, onSample, status, error }) {
         >
           <span className="eyebrow">
             <span className="h-1.5 w-1.5 rounded-full bg-flag-green" />
-            Powered by official CMS Medicare data
+            Official US, Australia & India fee schedules
           </span>
           <h1 className="mt-5 text-4xl font-extrabold leading-[1.05] tracking-tight text-white sm:text-5xl lg:text-6xl">
             Found a medical bill?
             <span className="block text-gradient">See potential overcharges in seconds.</span>
           </h1>
           <p className="mt-5 max-w-xl text-base leading-relaxed text-slate-300 sm:text-lg">
-            Upload your bill and compare every charge against official Medicare benchmarks. Detect
-            billing errors, estimate disputable costs, and generate an appeal letter instantly.
+            Upload your bill and we audit every charge — against official fee schedules where we
+            have them, and with universal math &amp; structural checks on any bill, in any currency.
+            Each finding shows exactly how much to trust it.
           </p>
 
-          <div className="mt-8">
+          <div className="mt-7">
+            <CountrySelect country={country} onChange={onCountryChange} />
+          </div>
+
+          <div className="mt-5">
             <Uploader onAnalyze={onAnalyze} status={status} error={error} />
           </div>
 
@@ -116,8 +122,8 @@ function HowItWorks() {
     },
     {
       n: '02',
-      title: 'Audit against CMS data',
-      body: 'Each code is checked against the Medicare benchmark, plus deterministic checks for duplicates, unbundling, and upcoding.',
+      title: 'Audit in tiers',
+      body: 'Universal math & structural checks run on any bill; coded lines are benchmarked against the country’s official fee schedule. Every flag is graded by how much to trust it.',
       icon: (
         <path d="M4 12h4l2 5 4-12 2 7h4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
       ),
@@ -177,15 +183,15 @@ function TrustSection() {
   const points = [
     {
       title: 'Official benchmarks, not guesses',
-      body: 'Every overcharge flag is measured against the CMS Medicare fee schedule — a real, citable number.',
+      body: 'Coded charges are measured against real fee schedules — US Medicare, Australian MBS, India CGHS — citable numbers, not vibes.',
     },
     {
-      title: 'Deterministic audit logic',
-      body: 'Duplicates, unbundling, and upcoding are caught by explicit rules that run the same way every time.',
+      title: 'Graded by how much to trust it',
+      body: 'Every flag carries a grounding badge: verified (official), structural (math/duplicate), or estimate (AI). Transparency is the point.',
     },
     {
-      title: 'Every finding is explainable',
-      body: 'Each flag shows the charge, the benchmark, the multiplier, and the reason — so you can defend it.',
+      title: 'Works on any bill',
+      body: 'Even with no codes or no fee schedule, universal arithmetic and structural checks still catch errors — in any currency.',
     },
   ]
   return (
@@ -201,7 +207,8 @@ function TrustSection() {
               </h2>
               <p className="mt-4 text-slate-400">
                 A chatbot can explain a bill from memory. MedBill Decoder checks your charges against
-                real Medicare data and runs the same audit a professional billing advocate would.
+                real fee-schedule data and runs the same tiered audit a professional billing advocate
+                would — and tells you how much to trust every finding.
               </p>
             </motion.div>
             <div className="grid gap-4">
@@ -244,19 +251,26 @@ function Footer() {
           <span className="font-medium text-slate-300">MedBill Decoder</span>
         </div>
         <p className="max-w-md text-xs leading-relaxed text-slate-500">
-          Benchmarks derived from the public CMS Medicare fee schedule. For informational purposes
-          only — not medical, legal, or financial advice.
+          Benchmarks derived from public fee schedules (US CMS Medicare, Australian MBS, India
+          CGHS). For informational purposes only — not medical, legal, or financial advice.
         </p>
       </div>
     </footer>
   )
 }
 
-export default function Landing({ onAnalyze, onSample, status, error }) {
+export default function Landing({ onAnalyze, onSample, status, error, country, onCountryChange }) {
   return (
     <div className="relative min-h-screen">
       <Navbar onSample={onSample} />
-      <Hero onAnalyze={onAnalyze} onSample={onSample} status={status} error={error} />
+      <Hero
+        onAnalyze={onAnalyze}
+        onSample={onSample}
+        status={status}
+        error={error}
+        country={country}
+        onCountryChange={onCountryChange}
+      />
       <HowItWorks />
       <DemoSection onSample={onSample} />
       <TrustSection />

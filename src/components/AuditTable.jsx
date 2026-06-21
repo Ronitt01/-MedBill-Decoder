@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { useIsLowPower } from '../lib/useIsLowPower.js'
+import { formatMoney } from '../lib/format.js'
 
 const FLAG_DOT = { red: 'bg-flag-red', yellow: 'bg-flag-yellow', green: 'bg-flag-green' }
 const FLAG_TEXT = { red: 'text-flag-red', yellow: 'text-flag-yellow', green: 'text-flag-green' }
@@ -14,13 +15,33 @@ const CHECK_LABEL = {
   duplicate: 'Duplicate',
   unbundling: 'Unbundling',
   upcoding: 'Upcoding',
-  unverified: 'Unverified',
+  matherror: 'Math error',
+  stay: 'Stay mismatch',
+  estimate: 'AI estimate',
+  unverified: 'No benchmark',
+}
+
+// Grounding badge — how much to trust a flag (verified › structural › estimate › none).
+const GROUNDING = {
+  verified: { label: 'Verified', cls: 'text-flag-green border-flag-green/30 bg-flag-green/10', title: 'Checked against an official fee schedule' },
+  structural: { label: 'Structural', cls: 'text-accent border-accent/30 bg-accent/10', title: 'Caught by arithmetic / the bill’s own structure' },
+  estimate: { label: 'AI estimate', cls: 'text-flag-yellow border-flag-yellow/30 bg-flag-yellow/10', title: 'AI market estimate — low confidence, not benchmarked' },
+  none: { label: 'Unverified', cls: 'text-slate-500 border-white/10 bg-white/5', title: 'No code and no structural signal — could not be checked' },
+}
+
+function GroundingBadge({ grounding }) {
+  const g = GROUNDING[grounding] || GROUNDING.none
+  return (
+    <span title={g.title} className={`rounded-md border px-1.5 py-0.5 text-[10px] font-semibold ${g.cls}`}>
+      {g.label}
+    </span>
+  )
 }
 
 // Monospace digit-scramble that settles left-to-right — used only on the Charged
 // figure of red (severity 2) rows, as the beam crosses them, to dramatize "computing".
-function ScrambleNumber({ value, delay = 0, play = true, duration = 520 }) {
-  const final = `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+function ScrambleNumber({ value, currency, delay = 0, play = true, duration = 520 }) {
+  const final = formatMoney(value, currency, { decimals: 2 })
   const [text, setText] = useState(play ? '' : final)
 
   useEffect(() => {
@@ -56,13 +77,14 @@ function ScrambleNumber({ value, delay = 0, play = true, duration = 520 }) {
   return <span className="tabular-nums">{text || ' '}</span>
 }
 
-function Row({ row, delay, skip }) {
+function Row({ row, delay, skip, currency, benchmarkLabel, codeLabel }) {
   const [open, setOpen] = useState(false)
   const fade = {
     initial: skip ? false : { opacity: 0, x: -4 },
     animate: { opacity: 1, x: 0 },
   }
   const figureTx = (k) => ({ delay: delay + k * 0.025, duration: 0.34, ease: EASE })
+  const m2 = (n) => formatMoney(n, currency, { decimals: 2 })
 
   return (
     <>
@@ -71,7 +93,7 @@ function Row({ row, delay, skip }) {
         data-glow={row.flag}
         data-readout={[
           row.code || '—',
-          row.multiplier != null ? `${row.multiplier}× Medicare` : null,
+          row.multiplier != null ? `${row.multiplier}× ${benchmarkLabel}` : null,
           FLAG_LABEL[row.flag]?.toUpperCase(),
         ]
           .filter(Boolean)
@@ -103,11 +125,12 @@ function Row({ row, delay, skip }) {
           <span className="block truncate text-sm font-medium text-white">
             {row.description || 'Unlabeled charge'}
           </span>
-          <span className="mt-0.5 flex flex-wrap items-center gap-1.5 sm:hidden">
-            <span className="font-mono text-[11px] text-slate-500">{row.code || '—'}</span>
-            <span className={`text-[11px] font-semibold ${FLAG_TEXT[row.flag]}`}>
+          <span className="mt-0.5 flex flex-wrap items-center gap-1.5">
+            <span className="font-mono text-[11px] text-slate-500 sm:hidden">{row.code || '—'}</span>
+            <span className={`text-[11px] font-semibold sm:hidden ${FLAG_TEXT[row.flag]}`}>
               {FLAG_LABEL[row.flag]}
             </span>
+            <GroundingBadge grounding={row.grounding} />
           </span>
         </span>
 
@@ -117,9 +140,9 @@ function Row({ row, delay, skip }) {
           className="hidden text-right font-mono text-sm text-white sm:block"
         >
           {row.severity === 2 ? (
-            <ScrambleNumber value={row.chargedAmount} delay={delay} play={!skip} />
+            <ScrambleNumber value={row.chargedAmount} currency={currency} delay={delay} play={!skip} />
           ) : (
-            `$${row.chargedAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`
+            m2(row.chargedAmount)
           )}
         </motion.span>
         <motion.span
@@ -127,7 +150,7 @@ function Row({ row, delay, skip }) {
           transition={figureTx(1)}
           className="hidden text-right font-mono text-sm text-slate-400 sm:block"
         >
-          {row.medicare != null ? `$${row.medicare.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '—'}
+          {row.benchmark != null ? m2(row.benchmark) : '—'}
         </motion.span>
         <motion.span
           {...fade}
@@ -139,7 +162,7 @@ function Row({ row, delay, skip }) {
 
         <span className="flex items-center justify-end">
           <motion.span {...fade} transition={figureTx(0)} className="text-right font-mono text-sm text-white sm:hidden">
-            ${row.chargedAmount.toLocaleString()}
+            {formatMoney(row.chargedAmount, currency, { decimals: 0 })}
           </motion.span>
           <svg
             viewBox="0 0 24 24"
@@ -161,8 +184,12 @@ function Row({ row, delay, skip }) {
             className="overflow-hidden bg-ink-900/40"
           >
             <div className="px-6 py-4 sm:pl-[104px]">
-              <div className="mb-3 flex flex-wrap gap-1.5">
-                {(row.checks?.length ? row.checks : ['ok']).map((c) => (
+              <div className="mb-3 flex flex-wrap items-center gap-1.5">
+                <GroundingBadge grounding={row.grounding} />
+                {(row.checks?.filter((c) => c !== 'unverified').length
+                  ? row.checks.filter((c) => c !== 'unverified')
+                  : ['ok']
+                ).map((c) => (
                   <span
                     key={c}
                     className="rounded-md border border-white/10 bg-white/5 px-2 py-0.5 text-[11px] font-medium text-slate-300"
@@ -172,15 +199,24 @@ function Row({ row, delay, skip }) {
                 ))}
               </div>
               <p className="max-w-2xl text-sm leading-relaxed text-slate-300">{row.reason}</p>
-              {row.medicare != null && (
+              {row.benchmark != null && (
                 <div className="mt-3 flex flex-wrap gap-x-6 gap-y-1 font-mono text-xs text-slate-500">
-                  <span>Medicare: ${row.medicare.toFixed(2)}</span>
-                  {row.fair != null && <span>Fair-market est.: ${row.fair.toFixed(2)}</span>}
-                  {row.multiplier != null && <span>Charged {row.multiplier}× Medicare</span>}
+                  <span>{benchmarkLabel}: {m2(row.benchmark)}</span>
+                  {row.fair != null && <span>Fair-market est.: {m2(row.fair)}</span>}
+                  {row.multiplier != null && <span>Charged {row.multiplier}× {benchmarkLabel}</span>}
                   <span>Confidence: {row.confidence}</span>
                 </div>
               )}
-              {row.source && row.medicare != null && (
+              {row.grounding === 'estimate' && row.estTypical != null && (
+                <div className="mt-3 flex flex-wrap gap-x-6 gap-y-1 font-mono text-xs text-slate-500">
+                  {row.estLow != null && row.estHigh != null && (
+                    <span>Typical range: {m2(row.estLow)}–{m2(row.estHigh)}</span>
+                  )}
+                  {row.estRatio != null && <span>Charged ~{row.estRatio}× typical</span>}
+                  <span>Confidence: low (AI estimate)</span>
+                </div>
+              )}
+              {row.source && row.benchmark != null && (
                 <p className="mt-2 text-xs text-slate-600">Source: {row.source}</p>
               )}
             </div>
@@ -211,6 +247,7 @@ export default function AuditTable({ report }) {
   const travel = Math.min(620, 70 * rowCount)
   // Rows are fixed-height, so row centers are analytic — no per-row DOM measurement.
   const delayFor = (i) => (skip ? 0 : Math.round((travel * (i + 0.5)) / rowCount) / 1000)
+  const { currency, benchmarkLabel = 'Medicare', codeLabel = 'Code' } = report
 
   return (
     <div className="card overflow-hidden">
@@ -219,7 +256,7 @@ export default function AuditTable({ report }) {
         <span>Code</span>
         <span>Description</span>
         <span className="text-right">Charged</span>
-        <span className="text-right">Medicare</span>
+        <span className="text-right">{benchmarkLabel}</span>
         <span className="text-right">Mult.</span>
         <span />
       </div>
@@ -247,7 +284,15 @@ export default function AuditTable({ report }) {
         )}
 
         {report.lineItems.map((row, i) => (
-          <Row key={row.id} row={row} delay={delayFor(i)} skip={skip} />
+          <Row
+            key={row.id}
+            row={row}
+            delay={delayFor(i)}
+            skip={skip}
+            currency={currency}
+            benchmarkLabel={benchmarkLabel}
+            codeLabel={codeLabel}
+          />
         ))}
       </div>
     </div>

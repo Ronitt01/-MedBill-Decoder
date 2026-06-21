@@ -1,7 +1,9 @@
 import { useMemo } from 'react'
 import { motion } from 'framer-motion'
 import { auditBill } from '../lib/audit.js'
-import { SAMPLE_BILL } from '../lib/sampleBill.js'
+import { SAMPLES, SAMPLE_LIST } from '../lib/sampleBill.js'
+import { getPack } from '../data/benchmarks/index.js'
+import { formatMoney } from '../lib/format.js'
 import AnimatedNumber from './AnimatedNumber.jsx'
 
 const FLAG_STYLES = {
@@ -12,7 +14,13 @@ const FLAG_STYLES = {
 const FLAG_LABEL = { red: 'Overcharge', yellow: 'Review', green: 'Fair' }
 
 export default function DemoSection({ onSample }) {
-  const report = useMemo(() => auditBill(SAMPLE_BILL.rawItems), [])
+  const sample = SAMPLES.US
+  const report = useMemo(
+    () => auditBill(sample.rawItems, { pack: getPack(sample.country), bill: sample.bill }),
+    [sample]
+  )
+  const cur = report.currency
+  const m = (n) => formatMoney(n, cur, { decimals: 0 })
   const topRows = report.lineItems.filter((l) => l.flag !== 'green').slice(0, 4)
 
   return (
@@ -30,7 +38,8 @@ export default function DemoSection({ onSample }) {
             See a real audit in action
           </h2>
           <p className="mt-3 text-slate-400">
-            This is an actual run of our audit engine on a sample ER bill — same logic your bill gets.
+            An actual run of our audit engine on a sample US ER bill — same logic your bill gets.
+            Try a sample from another country below to see the universal layers in action.
           </p>
         </motion.div>
 
@@ -45,8 +54,8 @@ export default function DemoSection({ onSample }) {
           <div className="card overflow-hidden">
             <div className="flex items-center justify-between border-b border-white/5 px-6 py-4">
               <div>
-                <p className="text-sm font-semibold text-white">{SAMPLE_BILL.providerName}</p>
-                <p className="text-xs text-slate-500">Account {SAMPLE_BILL.accountNumber}</p>
+                <p className="text-sm font-semibold text-white">{sample.providerName}</p>
+                <p className="text-xs text-slate-500">Account {sample.accountNumber}</p>
               </div>
               <span className="rounded-full bg-flag-red/15 px-3 py-1 text-xs font-semibold text-flag-red">
                 {report.counts.red} red flags
@@ -60,15 +69,15 @@ export default function DemoSection({ onSample }) {
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium text-white">{row.description}</p>
-                    <p className="font-mono text-xs text-slate-500">CPT {row.code}</p>
+                    <p className="font-mono text-xs text-slate-500">
+                      {report.codeLabel} {row.code || '—'}
+                    </p>
                   </div>
                   <div className="text-right">
-                    <p className="font-mono text-sm font-semibold text-white">
-                      ${row.chargedAmount.toLocaleString()}
-                    </p>
-                    {row.medicare != null && (
+                    <p className="font-mono text-sm font-semibold text-white">{m(row.chargedAmount)}</p>
+                    {row.benchmark != null && (
                       <p className="font-mono text-xs text-slate-500">
-                        Medicare ${row.medicare.toLocaleString()}
+                        {report.benchmarkLabel} {m(row.benchmark)}
                       </p>
                     )}
                   </div>
@@ -82,31 +91,48 @@ export default function DemoSection({ onSample }) {
             <div>
               <p className="text-xs uppercase tracking-widest text-slate-500">Potential errors found</p>
               <p className="mt-2 font-mono text-4xl font-extrabold text-flag-red sm:text-5xl">
-                <AnimatedNumber value={report.totalDisputable} prefix="$" decimals={0} />
+                <AnimatedNumber value={report.totalDisputable} prefix={cur.symbol} decimals={0} />
               </p>
               <div className="mt-6 space-y-3 text-sm">
                 <div className="flex items-center justify-between">
                   <span className="text-slate-400">Total billed</span>
-                  <span className="font-mono text-white">${report.totalCharged.toLocaleString()}</span>
+                  <span className="font-mono text-white">{m(report.totalCharged)}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-slate-400">Fair-market est.</span>
-                  <span className="font-mono text-flag-green">
-                    ${report.totalFair.toLocaleString()}
-                  </span>
+                  <span className="font-mono text-flag-green">{m(report.totalFair)}</span>
                 </div>
                 <div className="h-px bg-white/5" />
                 <div className="flex items-center justify-between">
                   <span className="font-medium text-white">Disputable</span>
                   <span className="font-mono font-semibold text-flag-red">
-                    ${report.totalDisputable.toLocaleString()}
+                    {m(report.totalDisputable)}
                   </span>
                 </div>
               </div>
             </div>
-            <button onClick={onSample} className="btn-primary mt-7 w-full">
-              Open full sample audit
-            </button>
+
+            <div className="mt-7">
+              <p className="mb-2 text-[11px] uppercase tracking-wider text-slate-500">
+                Open a full sample audit
+              </p>
+              <div className="grid grid-cols-3 gap-2">
+                {SAMPLE_LIST.map((s) => {
+                  const pack = getPack(s.country)
+                  return (
+                    <button
+                      key={s.country}
+                      onClick={() => onSample(s.country)}
+                      className="btn-ghost flex items-center justify-center gap-1.5 px-2 py-2 text-xs"
+                      title={`${pack.countryName} · ${pack.scheduleName}`}
+                    >
+                      <span aria-hidden="true">{pack.flag}</span>
+                      {s.country}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
           </div>
         </motion.div>
       </div>

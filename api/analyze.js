@@ -11,23 +11,33 @@ const MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash'
 const MAX_BASE64 = 6 * 1024 * 1024 // ~6MB of base64 payload guard
 
 const EXTRACTION_PROMPT = `You are a medical-billing OCR extractor. Read the attached medical bill
-(image or PDF) and return ONLY the line items as strict JSON.
+(image or PDF) and return ONLY the structured data as strict JSON.
 
 Return a JSON object of the shape:
 {
   "providerName": string | null,
   "accountNumber": string | null,
   "date": string | null,
+  "currencyHint": string | null,
+  "admissionDate": string | null,
+  "dischargeDate": string | null,
+  "subtotal": number | null,
+  "tax": number | null,
+  "grandTotal": number | null,
   "rawItems": [
-    { "code": string, "description": string, "qty": number, "chargedAmount": number, "date": string | null }
+    { "code": string, "description": string, "qty": number, "unitPrice": number | null, "lineTotal": number | null, "chargedAmount": number, "date": string | null }
   ]
 }
 
 Rules:
-- "code" is the CPT or HCPCS code (5 chars, e.g. "70551"). If a line has no visible code, use "".
-- "chargedAmount" is the dollar amount billed for that line as a number (no "$" or commas).
-- "qty" defaults to 1 if not shown.
-- Include EVERY billable line item you can see. Do not invent codes or amounts.
+- "code" is the billing code shown on the line (CPT/HCPCS in the US, MBS item number in Australia, CGHS code in India, etc.). If a line has no visible code, use "".
+- "unitPrice" is the per-unit price for the line if shown; otherwise null.
+- "lineTotal" / "chargedAmount" is the total amount billed for that line as a number (no currency symbol or commas). If only one total is shown, set both to the same value.
+- "qty" defaults to 1 if not shown. For room/bed charges, qty is the number of days.
+- "subtotal", "tax", "grandTotal" are the bill-level totals if printed; otherwise null.
+- "admissionDate" / "dischargeDate" only for inpatient stays, otherwise null.
+- "currencyHint" is the ISO currency code if you can tell (e.g. "USD", "AUD", "INR"), else null.
+- Include EVERY billable line item you can see. Do not invent codes, amounts, or totals — use null when not present.
 - Output JSON only. No markdown fences, no commentary.`
 
 function extractJson(text) {
@@ -93,6 +103,11 @@ export default async function handler(req, res) {
     }
 
     // Light server-side sanitation.
+    const num = (v) => {
+      if (v == null) return null
+      const n = Number(String(v).replace(/[^0-9.\-]/g, ''))
+      return Number.isFinite(n) ? n : null
+    }
     const rawItems = parsed.rawItems
       .filter((it) => it && (it.code || it.description))
       .slice(0, 60)
@@ -100,7 +115,9 @@ export default async function handler(req, res) {
         code: String(it.code || '').slice(0, 10),
         description: String(it.description || '').slice(0, 160),
         qty: Number(it.qty) > 0 ? Number(it.qty) : 1,
-        chargedAmount: Number(String(it.chargedAmount).replace(/[^0-9.\-]/g, '')) || 0,
+        unitPrice: num(it.unitPrice),
+        lineTotal: num(it.lineTotal),
+        chargedAmount: num(it.chargedAmount) ?? num(it.lineTotal) ?? 0,
         date: it.date ? String(it.date).slice(0, 40) : parsed.date || '',
       }))
 
@@ -108,6 +125,14 @@ export default async function handler(req, res) {
       providerName: parsed.providerName || null,
       accountNumber: parsed.accountNumber || null,
       date: parsed.date || null,
+      currencyHint: parsed.currencyHint || null,
+      bill: {
+        admissionDate: parsed.admissionDate || null,
+        dischargeDate: parsed.dischargeDate || null,
+        subtotal: num(parsed.subtotal),
+        tax: num(parsed.tax),
+        grandTotal: num(parsed.grandTotal),
+      },
       rawItems,
     })
   } catch (err) {

@@ -5,12 +5,7 @@
 // disputed amount. Generated locally from the audit report (no API call) so it
 // always works in a demo and never invents figures.
 
-function fmt(n) {
-  return `$${(Number(n) || 0).toLocaleString('en-US', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`
-}
+import { formatMoney } from './format.js'
 
 export function buildAppealLetter(report, meta = {}) {
   const {
@@ -19,6 +14,11 @@ export function buildAppealLetter(report, meta = {}) {
     providerName = '[Provider / Hospital Name]',
     dateLabel = '[Date]',
   } = meta
+
+  const fmt = (n) => formatMoney(n, report.currency, { decimals: 2 })
+  const benchmarkLabel = report.benchmarkLabel || 'benchmark'
+  const codeLabel = report.codeLabel || 'billing'
+  const scheduleName = report.scheduleName || report.source || 'the published fee schedule'
 
   const flagged = report.lineItems.filter((l) => l.flag === 'red' || (l.disputable || 0) > 0)
 
@@ -47,7 +47,7 @@ To Whom It May Concern:
 
 I am requesting a fully itemized statement for the above account. The statement I
 received lists only summary categories and totals, without the individual billing
-codes (CPT/HCPCS), unit prices, quantities, and dates of service required to verify
+codes (${codeLabel}), unit prices, quantities, and dates of service required to verify
 the charges. As billed, these charges cannot be independently reviewed:
 
 ${summary}
@@ -57,7 +57,7 @@ Total billed: ${fmt(report.totalCharged)}
 I respectfully request that you:
 
   1. Provide a fully itemized bill listing every service and supply, each with its
-     CPT/HCPCS (or equivalent) code, unit price, quantity, and date of service.
+     ${codeLabel} (or equivalent) code, unit price, quantity, and date of service.
   2. Identify any bundled or package charges and the components included in them.
   3. Place any collection activity on hold until the itemized bill is provided and I
      have had a reasonable opportunity to review it.
@@ -75,15 +75,17 @@ This letter was prepared with MedBill Decoder. Informational only; not legal adv
   }
 
   const lines = flagged.map((l, i) => {
-    const parts = [`${i + 1}. CPT/HCPCS ${l.code || 'N/A'} — ${l.description || 'service'}`]
+    const parts = [`${i + 1}. ${codeLabel} ${l.code || 'N/A'} — ${l.description || 'service'}`]
     parts.push(`   Charged: ${fmt(l.chargedAmount)}`)
-    if (l.medicare != null) {
+    if (l.benchmark != null) {
       parts.push(
-        `   Medicare allowed: ${fmt(l.medicare)}${l.multiplier ? `  (charged ${l.multiplier}× the Medicare rate)` : ''}`
+        `   ${benchmarkLabel} reference rate: ${fmt(l.benchmark)}${
+          l.multiplier ? `  (charged ${l.multiplier}× the ${benchmarkLabel} rate)` : ''
+        }`
       )
     }
     if (l.fair != null) {
-      parts.push(`   Fair-market estimate: ${fmt(l.fair)}  (≈${l.fairMultiple}× Medicare)`)
+      parts.push(`   Fair-market estimate: ${fmt(l.fair)}  (≈${l.fairMultiple}× ${benchmarkLabel})`)
     }
     if (l.disputable > 0) {
       parts.push(`   Amount disputed on this line: ${fmt(l.disputable)}`)
@@ -94,6 +96,9 @@ This letter was prepared with MedBill Decoder. Informational only; not legal adv
         duplicate: 'duplicate charge',
         unbundling: 'unbundling',
         upcoding: 'possible upcoding',
+        matherror: 'arithmetic / math error',
+        stay: 'charge exceeds length of stay',
+        estimate: 'above typical market estimate',
         unverified: 'unverified code',
       }
       parts.push(`   Issue: ${l.checks.map((c) => labels[c] || c).join(', ')}`)
@@ -113,22 +118,26 @@ Patient: ${patientName}
 To Whom It May Concern:
 
 I am writing to formally dispute charges on the above account. After reviewing the
-itemized statement and comparing the charges to the published Centers for Medicare &
-Medicaid Services (CMS) fee schedule, I have identified the following items that appear
-to be billed in error or substantially above a reasonable, benchmarked rate:
+itemized statement and comparing the charges to ${scheduleName}, as well as checking
+the bill's internal arithmetic and structure, I have identified the following items
+that appear to be billed in error or substantially above a reasonable, benchmarked rate:
 
 ${lines.join('\n\n')}
 
 Based on the above, I am disputing a total of ${fmt(report.totalDisputable)} of the
 ${fmt(report.totalCharged)} billed. I respectfully request that you:
 
-  1. Provide a fully itemized bill, including all CPT/HCPCS codes and unit charges.
+  1. Provide a fully itemized bill, including all ${codeLabel} codes and unit charges.
   2. Review and correct the duplicate, unbundled, and/or excessive charges identified above.
   3. Re-bill the corrected amount, and confirm in writing the adjustments made.
-
+${
+  report.country === 'US'
+    ? `
 Where applicable, I also request confirmation that the charges comply with the federal
 No Surprises Act and any applicable state balance-billing protections.
-
+`
+    : ''
+}
 Please treat this as a formal request and place any collection activity on hold pending
 your review. I can be reached at the contact information below. I look forward to your
 written response within 30 days.
