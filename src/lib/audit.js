@@ -230,11 +230,15 @@ function summarize(lines, pack, billFindings) {
   const totalBenchmark = money(
     lines.reduce((s, l) => s + (l.benchmark != null ? l.benchmark : l.chargedAmount), 0)
   )
-  const totalFair = money(lines.reduce((s, l) => s + (l.fair != null ? l.fair : l.chargedAmount), 0))
   const totalDisputable = money(
     lines.reduce((s, l) => s + (l.disputable || 0), 0) +
       billFindings.reduce((s, f) => s + (f.amount || 0), 0)
   )
+  // The fair-market total is what's left after removing every disputable amount, so
+  // it always reconciles with the disputable figure: fair + disputable = charged. (A
+  // naive sum of per-line fair ceilings double-counts duplicates/structural lines and,
+  // on a no-benchmark bill, collapses to the charged total — contradicting disputable.)
+  const totalFair = money(Math.max(0, totalCharged - totalDisputable))
   const totalPotential = money(lines.reduce((s, l) => s + (l.potential || 0), 0))
 
   const verifiedCount = lines.filter((l) => l.benchmark != null).length
